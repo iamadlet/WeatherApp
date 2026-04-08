@@ -1,11 +1,11 @@
 import Foundation
 
-protocol NetworkClientProtocol {
+protocol NetworkManagerProtocol {
     var host: String { get }
     func send<T: ApiRequestProtocol>(request: T, completion: @escaping (Result<T.Response, ApiClientError>) -> Void)
 }
 
-struct NetworkClient: NetworkClientProtocol {
+struct NetworkManager: NetworkManagerProtocol {
     let host: String
     private let token: String
     
