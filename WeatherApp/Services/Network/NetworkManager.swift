@@ -14,36 +14,60 @@ struct NetworkManager: NetworkManagerProtocol {
         self.token = token
     }
     
-    func send<T>(request: T, completion: @escaping (Result<T.Response, ApiClientError>) -> Void) where T : ApiRequestProtocol {
+    func send<T>(
+        request: T,
+        completion: @escaping (Result<T.Response, ApiClientError>) -> Void
+    ) where T : ApiRequestProtocol {
+        
         guard let request = request.makeRequest(host: host) else {
-            completion(.failure(ApiClientError.request))
+            completion(.failure(ApiClientError.invalidRequest))
             return
         }
         
         let task = URLSession.shared.dataTask(with: request) { (data: Data?, response: URLResponse?, error: Error?) in
-            guard error == nil, let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(ApiClientError.network))
+            
+            if let error = error as? URLError {
+                switch error.code {
+                case .notConnectedToInternet:
+                    completion(.failure(ApiClientError.noNetworkConnection))
+                case .timedOut:
+                    completion(.failure(ApiClientError.timeout))
+                default:
+                    completion(.failure(ApiClientError.network(error)))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(ApiClientError.invalidResponse))
+                return
+            }
+            
+            switch httpResponse.statusCode {
+            case 200...299:
+                break
+            case 400...499:
+                completion(.failure(ApiClientError.clientError(httpResponse.statusCode)))
+                return
+            case 500...599:
+                completion(.failure(ApiClientError.serverError(httpResponse.statusCode)))
+                return
+            default:
+                completion(.failure(ApiClientError.unexpectedStatusCode(httpResponse.statusCode)))
                 return
             }
             
             guard let data = data else {
-                completion(.failure(ApiClientError.empty))
+                completion(.failure(ApiClientError.noData))
                 return
             }
             
-            guard httpResponse.statusCode == 200 else {
-                completion(.failure(ApiClientError.service(httpResponse.statusCode)))
-                return
+            do {
+                let result = try JSONDecoder().decode(T.Response.self, from: data)
+                completion(.success(result))
+            } catch {
+                completion(.failure(ApiClientError.decoding(error)))
             }
-            
-            let decoder = JSONDecoder()
-            
-            guard let result = try? decoder.decode(T.Response.self, from: data) else {
-                completion(.failure(ApiClientError.deserialize))
-                return
-            }
-            
-            completion(.success(result))
         }
         task.resume()
     }

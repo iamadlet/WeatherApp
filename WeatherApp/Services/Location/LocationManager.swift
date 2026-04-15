@@ -30,10 +30,24 @@ final class LocationManager: NSObject, LocationManagerProtocol {
 
 extension LocationManager: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentLocation = locations.last
+        guard let location = locations.last else { return }
+        print(location.coordinate.latitude, location.coordinate.longitude)
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         // TODO: - добавить функционал для этого метода
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+            
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.requestLocation()
+            
+        case .denied, .restricted:
+            print("Нет доступа к локации")
+            
+        default:
+            break
+        }
     }
 }

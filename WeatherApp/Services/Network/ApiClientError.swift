@@ -1,9 +1,17 @@
 import Foundation
 
 enum ApiClientError: Error {
-    case request
-    case network
-    case empty
-    case service(_ code: Int)
-    case deserialize
+    case invalidRequest
+    
+    case noNetworkConnection
+    case timeout
+    case network(Error)
+    
+    case clientError(Int)
+    case serverError(Int)
+    case unexpectedStatusCode(Int)
+
+    case noData
+    case decoding(Error)
+    case invalidResponse
 }
