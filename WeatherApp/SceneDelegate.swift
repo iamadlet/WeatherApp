@@ -25,7 +25,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.makeKeyAndVisible()
         
         // TODO: - Поменять на нормальной метод чтобы принтить координаты
-        locationManager.requestLocation()
+        locationManager.requestCurrentLocation()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

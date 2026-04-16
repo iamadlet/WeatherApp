@@ -5,11 +5,13 @@ protocol LocationManagerProtocol: AnyObject {
     var authorizationStatus: CLAuthorizationStatus { get }
     var currentLocation: CLLocation? { get }
     
-    func requestLocation()
+    func requestCurrentLocation(completion: @escaping (Double, Double) -> Void)
 }
 
 final class LocationManager: NSObject, LocationManagerProtocol {
     private let manager: CLLocationManager
+    
+    private var onLocation: ((Double, Double) -> Void)?
     
     private(set) var currentLocation: CLLocation?
     
@@ -23,8 +25,11 @@ final class LocationManager: NSObject, LocationManagerProtocol {
         manager.delegate = self
     }
     
-    func requestLocation() {
+    func requestCurrentLocation(completion: @escaping (Double, Double) -> Void) {
         manager.requestWhenInUseAuthorization()
+        manager.requestLocation()
+        
+        self.onLocation = completion
     }
     
     
@@ -35,10 +40,10 @@ extension LocationManager: CLLocationManagerDelegate {
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
-        guard let location = locations.last else { return }
+        guard let location = locations.last?.coordinate else { return }
         
-        currentLocation = location
-        print(location.coordinate.latitude, location.coordinate.longitude)
+        onLocation?(location.latitude, location.longitude)
+        print(location.latitude, location.longitude)
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {

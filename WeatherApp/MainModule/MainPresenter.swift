@@ -17,7 +17,7 @@ final class MainPresenter: MainPresenterProtocol {
     }
     
     func getLocation() {
-        locationManager.requestLocation()
+        locationManager.requestCurrentLocation()
     }
     
     func getWeather() {
