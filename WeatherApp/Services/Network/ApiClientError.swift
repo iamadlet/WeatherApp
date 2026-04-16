@@ -12,6 +12,6 @@ enum ApiClientError: Error {
     case unexpectedStatusCode(Int)
 
     case noData
-    case decoding(Error)
+    case decodingError
     case invalidResponse
 }

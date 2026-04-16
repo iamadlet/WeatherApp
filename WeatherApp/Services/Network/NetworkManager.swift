@@ -66,7 +66,7 @@ struct NetworkManager: NetworkManagerProtocol {
                 let result = try JSONDecoder().decode(T.Response.self, from: data)
                 completion(.success(result))
             } catch {
-                completion(.failure(ApiClientError.decoding(error)))
+                completion(.failure(ApiClientError.decodingError))
             }
         }
         task.resume()

@@ -1,23 +1,23 @@
 import Foundation
 
 struct ForecastRequest: ApiRequestProtocol {
-    typealias Response = ForecastResponse
+    typealias Response = OneCallResponse
     
     var endpoint: String { "/data/2.5/forecast" }
     
     var parameters: [URLQueryItem]? {
         [
             URLQueryItem(name: "q", value: city),
-            URLQueryItem(name: "appid", value: apiKey),
+            URLQueryItem(name: "appid", value: appid),
             URLQueryItem(name: "units", value: "metric")
         ]
     }
     
     let city: String
-    let apiKey: String
+    let appid: String
     
-    init(city: String, apiKey: String) {
+    init(city: String, appid: String) {
         self.city = city
-        self.apiKey = apiKey
+        self.appid = appid
     }
 }

@@ -2,11 +2,11 @@ import Foundation
 
 protocol MainPresenterProtocol: AnyObject {
     func getLocation()
-    func getWeather()
+    func loadWeather()
 }
 
 final class MainPresenter: MainPresenterProtocol {
-//    private var location: (Int, Int)
+    private var location: Coordinates?
     
     private let locationManager: LocationManagerProtocol
     private let networkManager: NetworkManagerProtocol
@@ -17,10 +17,14 @@ final class MainPresenter: MainPresenterProtocol {
     }
     
     func getLocation() {
-        locationManager.requestCurrentLocation()
+        locationManager.requestCurrentLocation { [weak self] lat, lon in
+            self?.location = Coordinates(latitude: lat, longitude: lon)
+            self?.loadWeather()
+            
+        }
     }
     
-    func getWeather() {
+    func loadWeather() {
         
     }
 }
