@@ -7,17 +7,20 @@ struct ForecastRequest: ApiRequestProtocol {
     
     var parameters: [URLQueryItem]? {
         [
-            URLQueryItem(name: "q", value: city),
+            URLQueryItem(name: "lat", value: String(lat)),
+            URLQueryItem(name: "lon", value: String(lon)),
             URLQueryItem(name: "appid", value: appid),
             URLQueryItem(name: "units", value: "metric")
         ]
     }
     
-    let city: String
+    let lat: Double
+    let lon: Double
     let appid: String
     
-    init(city: String, appid: String) {
-        self.city = city
+    init(lat: Double, lon: Double, appid: String) {
+        self.lat = lat
+        self.lon = lon
         self.appid = appid
     }
 }
