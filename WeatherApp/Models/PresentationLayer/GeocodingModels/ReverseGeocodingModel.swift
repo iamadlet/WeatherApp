@@ -1,8 +1,13 @@
-//
-//  ReverseGeocodingModel.swift
-//  WeatherApp
-//
-//  Created by Адлет Жумагалиев on 17.04.2026.
-//
-
 import Foundation
+
+struct ReverseGeocodingModel {
+    let name: String
+    let country: String
+}
+
+extension ReverseGeocodingModel {
+    init?(response: ReverseGeocodingResponse) {
+        self.name = response.name
+        self.country = response.country
+    }
+}

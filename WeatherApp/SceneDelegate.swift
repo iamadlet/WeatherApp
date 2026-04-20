@@ -20,12 +20,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = MainViewController()
+        window.rootViewController = MainViewController(coder: NSCoder())
         self.window = window
         window.makeKeyAndVisible()
         
         // TODO: - Поменять на нормальной метод чтобы принтить координаты
-        locationManager.requestCurrentLocation()
+        locationManager.requestCurrentLocation { lat, lon in
+            print("Координаты: \(lat), \(lon)")
+        }
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

@@ -37,6 +37,7 @@ final class WeatherService: WeatherServiceProtocol {
                 
             case .failure(let error):
                 completion(.failure(error))
+                print("ERROR: \(error)")
             }
         }
     }

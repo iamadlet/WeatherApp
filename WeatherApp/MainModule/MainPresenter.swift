@@ -7,7 +7,9 @@ protocol MainPresenterProtocol: AnyObject {
 
 final class MainPresenter: MainPresenterProtocol {
     private var location: Coordinates?
-    private var weather: WeatherModel?
+    private var currentWeather: CurrentWeatherModel?
+    private var hourlyWeather: [HourlyWeatherModel]?
+    private var dailyWeather: [DailyWeatherModel]?
     
     private let weatherService: WeatherServiceProtocol
     
@@ -37,7 +39,10 @@ final class MainPresenter: MainPresenterProtocol {
                 
                 switch result {
                 case .success(let weather):
-                    self.weather = weather
+                    self.currentWeather = weather.current
+                    self.hourlyWeather = weather.hourly
+                    self.dailyWeather = weather.daily
+                    
                     // TODO: Добавить показ экрана с подгруженными данными
                 case .failure(let error):
                     print("Error: \(error.localizedDescription)")

@@ -1,10 +1,15 @@
 import UIKit
 
 protocol MainViewProtocol: AnyObject {
+    func showWeaher()
     
+    func showError()
+    
+    func showLoading()
+    func hideLoading()
 }
 
-final class MainViewController: UIViewController, MainViewProtocol {
+final class MainViewController: UIViewController {
     private let presenter: MainPresenterProtocol
     
     init(presenter: MainPresenterProtocol) {
@@ -21,4 +26,13 @@ final class MainViewController: UIViewController, MainViewProtocol {
     override func loadView() {
         self.view = mainView
     }
+}
+
+extension MainViewController: MainViewProtocol {
+    func showWeaher() {}
+    
+    func showError() {}
+    
+    func showLoading() {}
+    func hideLoading() {}
 }

@@ -3,7 +3,7 @@ import Foundation
 struct ForecastRequest: ApiRequestProtocol {
     typealias Response = OneCallResponse
     
-    var endpoint: String { "/data/2.5/forecast" }
+    var endpoint: String { "/data/3.0/onecall" }
     
     var parameters: [URLQueryItem]? {
         [
