@@ -1,55 +1,154 @@
 import Foundation
 
 protocol MainPresenterProtocol: AnyObject {
-    func loadWeather(location: Coordinates?)
-    func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground
+    func viewDidLoad()
+    func didTapRetry()
+    
+    // Data Source
+    var numberOfSections: Int { get }
+    func numberOfItems(in section: Int) -> Int
+    func sectionType(for section: Int) -> WeatherSection?
+    
+    // Models
+    func currentWeather() -> CurrentWeatherModel?
+    func hourlyWeather(at index: Int) -> HourlyWeatherModel?
+    func dailyWeather(at index: Int) -> DailyWeatherModel?
+    
+    func weekTemperatureRange() -> (min: Double, max: Double)
+    func isFirstItem(_ index: Int) -> Bool
 }
 
 final class MainPresenter: MainPresenterProtocol {
-    private var location: Coordinates?
-    private var currentWeather: CurrentWeatherModel?
-    private var hourlyWeather: [HourlyWeatherModel]?
-    private var dailyWeather: [DailyWeatherModel]?
+    weak var view: MainViewProtocol?
     
     private let weatherService: WeatherServiceProtocol
+    private let locationService: LocationManagerProtocol
     
-    init(weatherService: WeatherServiceProtocol) {
+    init(weatherService: WeatherServiceProtocol, locationManager: LocationManagerProtocol) {
         self.weatherService = weatherService
+        self.locationService = locationManager
     }
     
-    func loadWeather(location: Coordinates?) {
-        
-        // MARK: - Если пустые/битые координаты
-        guard let location = location else {
-            DispatchQueue.main.async {
-                // TODO: Добавить state для пустого массива
-            }
-            return
+    private var currentWeatherModel: CurrentWeatherModel?
+    private var hourlyWeatherModels: [HourlyWeatherModel] = []
+    private var dailyWeatherModels: [DailyWeatherModel] = []
+    
+    private var weekMinTemp: Double = 0
+    private var weekMaxTemp: Double = 0
+    
+    private var city: String = ""
+    
+    
+    func didTapRetry() {
+        loadWeather()
+    }
+    
+    var numberOfSections: Int {
+        return WeatherSection.allCases.count
+    }
+    
+    func numberOfItems(in section: Int) -> Int {
+        guard let sectionType = WeatherSection(rawValue: section) else {
+            return 0
         }
         
-        // TODO: - Добавить state во время загрузки
+        switch sectionType {
+        case .current:
+            return currentWeatherModel != nil ? 1 : 0
+        case .hourly:
+            return hourlyWeatherModels.count
+        case .daily:
+            return dailyWeatherModels.count
+        }
+    }
+    
+    func sectionType(for section: Int) -> WeatherSection? {
+        return WeatherSection(rawValue: section)
+    }
+    
+    func currentWeather() -> CurrentWeatherModel? {
+        currentWeatherModel
+    }
+    
+    func hourlyWeather(at index: Int) -> HourlyWeatherModel? {
+        guard index < hourlyWeatherModels.count else { return nil }
+        return hourlyWeatherModels[index]
+    }
+    
+    func dailyWeather(at index: Int) -> DailyWeatherModel? {
+        guard index < dailyWeatherModels.count else { return nil }
+        return dailyWeatherModels[index]
+    }
+    
+    func weekTemperatureRange() -> (min: Double, max: Double) {
+        return (weekMinTemp, weekMaxTemp)
+    }
+    
+    func isFirstItem(_ index: Int) -> Bool {
+        return index == 0
+    }
+    
+    func viewDidLoad() {
+        loadWeather()
+    }
+    
+    func loadWeather() {
+        view?.showLoading()
         
-        // MARK: - Сборка запроса
-        let request = ForecastRequest(lat: location.latitude, lon: location.longitude, appid: Secrets.apiKey)
+        // MARK: - Если пустые/битые координаты
+        locationService.getCurrentLocation { [weak self] result in
+            switch result {
+            case .success(let coordinates):
+                self?.fetchWeather(location: coordinates)
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    self?.view?.showError()
+                }
+            }
+        }
+    }
+    
+    func fetchWeather(location: Coordinates) {
+        let request = ForecastRequest(
+            lat: location.latitude,
+            lon: location.longitude,
+            appid: Secrets.apiKey
+        )
         
-        // MARK: - Запрос в сеть
         weatherService.fetchWeather(request: request) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 
                 switch result {
                 case .success(let weather):
-                    self.currentWeather = weather.current
-                    self.hourlyWeather = weather.hourly
-                    self.dailyWeather = weather.daily
-                    
-                    // TODO: Добавить показ экрана с подгруженными данными
+                    self.handleWeatherResponse(weather)
                 case .failure(let error):
-                    print("Error: \(error.localizedDescription)")
-                    // TODO: Добавить показ error view state-a
+                    self.view?.showError()
                 }
             }
         }
+    }
+    
+    func handleWeatherResponse(_ weather: WeatherModel) {
+        currentWeatherModel = weather.current
+        hourlyWeatherModels = weather.hourly
+        dailyWeatherModels = weather.daily
+        
+        calculateWeekTemperatureRange()
+        
+        if let current = currentWeatherModel {
+            let background = makeBackground(weather: current)
+            view?.setBackground(background)
+        }
+        
+        view?.reloadData()
+    }
+    
+    func calculateWeekTemperatureRange() {
+        guard !dailyWeatherModels.isEmpty else { return }
+        
+        weekMinTemp = dailyWeatherModels.map { $0.minTemperature }.min() ?? 0
+        weekMaxTemp = dailyWeatherModels.map { $0.maxTemperature }.max() ?? 0
     }
     
     func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {

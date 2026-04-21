@@ -66,7 +66,7 @@ extension CurrentWeatherCell {
         }
     }
     
-    func configure(weather: WeatherModel, city: String) {
+    func configure(with weather: WeatherModel, city: String) {
         cityLabel.text = city
         temperatureLabel.text = "\(weather.current.temperature)°C"
         descriptionLabel.text = weather.current.description

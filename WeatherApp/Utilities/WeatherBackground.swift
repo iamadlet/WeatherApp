@@ -1,4 +1,4 @@
-enum WeatherBackground {
+enum WeatherBackground: String {
     case morning
     case afternoon
     case evening
