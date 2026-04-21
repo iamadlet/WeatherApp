@@ -8,4 +8,5 @@ enum AppColorManager {
     static let cititesBackground = UIColor(named: "#2B4F73")
     static let settingsBackground = UIColor(named: "#424D5885")
     static let sun = UIColor(named: "#DAC42D")
+    static let black = UIColor(named: "#000000")
 }
