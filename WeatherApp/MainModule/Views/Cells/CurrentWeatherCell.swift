@@ -66,10 +66,15 @@ extension CurrentWeatherCell {
         }
     }
     
-    func configure(with weather: WeatherModel, city: String) {
+    func configure( city: String, current: CurrentWeatherModel, todayDaily: DailyWeatherModel?) {
         cityLabel.text = city
-        temperatureLabel.text = "\(weather.current.temperature)°C"
-        descriptionLabel.text = weather.current.description
-        minMaxTemperatureLabel.text = "Max.: \(String(describing: weather.daily.first?.maxTemperature))°C, min.:  \(String(describing: weather.daily.first?.minTemperature))°C"
+        temperatureLabel.text = "\(Int(current.temperature))°"
+        descriptionLabel.text = current.description
+        
+        if let daily = todayDaily {
+            minMaxTemperatureLabel.text = "Max.: \(Int(daily.maxTemperature.rounded()))°C, min.:  \(Int(daily.minTemperature.rounded()))°C"
+        } else {
+            minMaxTemperatureLabel.text = ""
+        }
     }
 }

@@ -8,7 +8,6 @@ protocol MainViewProtocol: AnyObject {
     func showLoading()
     func reloadData()
     func setBackground(_ background: WeatherBackground)
-    func cityName() -> String
 }
 
 final class MainViewController: UIViewController {
@@ -114,11 +113,15 @@ private extension MainViewController {
             withReuseIdentifier: CurrentWeatherCell.identifier,
             for: indexPath
         ) as? CurrentWeatherCell,
-        let model = presenter.currentWeather() else {
+        let current = presenter.currentWeather() else {
             return UICollectionViewCell()
         }
         
-        cell.configure(with: model)
+        cell.configure(
+            city: presenter.cityName(),
+            current: current,
+            todayDaily: presenter.todayDailyWeather()
+        )
         return cell
     }
     

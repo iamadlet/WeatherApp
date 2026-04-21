@@ -18,16 +18,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
         guard let windowScene = (scene as? UIWindowScene) else { return }
-        
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = MainViewController(coder: NSCoder())
-        self.window = window
-        window.makeKeyAndVisible()
+        let mainModule = MainFactory().make()
         
-        // TODO: - Поменять на нормальной метод чтобы принтить координаты
-        locationManager.requestCurrentLocation { lat, lon in
-            print("Координаты: \(lat), \(lon)")
-        }
+        window.rootViewController = mainModule
+        window.makeKeyAndVisible()
+        self.window = window
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

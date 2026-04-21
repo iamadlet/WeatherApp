@@ -1,15 +1,16 @@
 import Foundation
 
 struct ReverseGeocodingRequest: ApiRequestProtocol {
-    typealias Response = ReverseGeocodingResponse
+    typealias Response = [ReverseGeocodingResponse]
     
-    var endpoint: String { "geo/1.0/reverse" }
+    var endpoint: String { "/geo/1.0/reverse" }
     
     var parameters: [URLQueryItem]? {
         [
             URLQueryItem(name: "lat", value: String(lat)),
             URLQueryItem(name: "lon", value: String(lon)),
-            URLQueryItem(name: "appid", value: appid)
+            URLQueryItem(name: "appid", value: appid),
+            URLQueryItem(name: "limit", value: "1")
         ]
     }
     

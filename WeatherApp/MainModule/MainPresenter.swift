@@ -10,9 +10,12 @@ protocol MainPresenterProtocol: AnyObject {
     func sectionType(for section: Int) -> WeatherSection?
     
     // Models
+    func cityName() -> String
     func currentWeather() -> CurrentWeatherModel?
     func hourlyWeather(at index: Int) -> HourlyWeatherModel?
     func dailyWeather(at index: Int) -> DailyWeatherModel?
+    
+    func todayDailyWeather() -> DailyWeatherModel?
     
     func weekTemperatureRange() -> (min: Double, max: Double)
     func isFirstItem(_ index: Int) -> Bool
@@ -22,11 +25,13 @@ final class MainPresenter: MainPresenterProtocol {
     weak var view: MainViewProtocol?
     
     private let weatherService: WeatherServiceProtocol
-    private let locationService: LocationManagerProtocol
+    private let geocodingService: GeocodingServiceProtocol
+    private let locationManager: LocationManagerProtocol
     
-    init(weatherService: WeatherServiceProtocol, locationManager: LocationManagerProtocol) {
+    init(weatherService: WeatherServiceProtocol, geocodingService: GeocodingServiceProtocol, locationManager: LocationManagerProtocol) {
         self.weatherService = weatherService
-        self.locationService = locationManager
+        self.geocodingService = geocodingService
+        self.locationManager = locationManager
     }
     
     private var currentWeatherModel: CurrentWeatherModel?
@@ -37,10 +42,19 @@ final class MainPresenter: MainPresenterProtocol {
     private var weekMaxTemp: Double = 0
     
     private var city: String = ""
+    private var coordinates: Coordinates?
     
+    
+    func cityName() -> String {
+        return city
+    }
+    
+    func todayDailyWeather() -> DailyWeatherModel? {
+        return dailyWeatherModels.first
+    }
     
     func didTapRetry() {
-        loadWeather()
+        loadData()
     }
     
     var numberOfSections: Int {
@@ -89,17 +103,60 @@ final class MainPresenter: MainPresenterProtocol {
     }
     
     func viewDidLoad() {
-        loadWeather()
+        loadData()
+    }
+}
+
+extension MainPresenter {
+    private func makeDayTime(date: Date) -> DayTime {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 6..<12: return .morning
+        case 12..<18: return .afternoon
+        case 18..<22: return .evening
+        default: return .night
+        }
     }
     
-    func loadWeather() {
+    private func isRaining(weatherId: Int) -> Bool {
+        return weatherId >= 200 && weatherId <= 531
+    }
+}
+
+private extension MainPresenter {
+    func loadData() {
         view?.showLoading()
         
         // MARK: - Если пустые/битые координаты
-        locationService.getCurrentLocation { [weak self] result in
+        fetchLocation { [weak self] coordinates in
+            self?.coordinates = coordinates
+            self?.fetchAllData(for: coordinates)
+        }
+    }
+    
+    func fetchAllData(for coordinates: Coordinates) {
+        let group = DispatchGroup()
+        
+        group.enter()
+        fetchCityName(for: coordinates) {
+            group.leave()
+        }
+        
+        group.enter()
+        fetchWeather(for: coordinates) {
+            group.leave()
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            self?.handleDataLoaded()
+        }
+    }
+    
+    func fetchLocation(completion: @escaping (Coordinates) -> Void) {
+        locationManager.getCurrentLocation { [weak self] result in
             switch result {
             case .success(let coordinates):
-                self?.fetchWeather(location: coordinates)
+                completion(coordinates)
             case .failure(let error):
                 DispatchQueue.main.async {
                     self?.view?.showError()
@@ -108,24 +165,44 @@ final class MainPresenter: MainPresenterProtocol {
         }
     }
     
-    func fetchWeather(location: Coordinates) {
+    func fetchCityName(for coordinates: Coordinates, completion: @escaping () -> Void) {
+        let request = ReverseGeocodingRequest(
+            lat: coordinates.latitude,
+            lon: coordinates.longitude,
+            appid: Secrets.apiKey
+        )
+        
+        geocodingService.fetchCityName(request: request) { [weak self] result in
+            switch result {
+            case .success(let city):
+                print("City found: \(city.name)")
+                self?.city = city.name
+            case .failure(let error):
+                self?.city = "Unknown city"
+            }
+            completion()
+        }
+    }
+    
+    func fetchWeather(for coordinates: Coordinates, completion: @escaping () -> Void) {
         let request = ForecastRequest(
-            lat: location.latitude,
-            lon: location.longitude,
+            lat: coordinates.latitude,
+            lon: coordinates.longitude,
             appid: Secrets.apiKey
         )
         
         weatherService.fetchWeather(request: request) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                switch result {
-                case .success(let weather):
-                    self.handleWeatherResponse(weather)
-                case .failure(let error):
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let weather):
+                self.handleWeatherResponse(weather)
+            case .failure(let error):
+                DispatchQueue.main.async {
                     self.view?.showError()
                 }
             }
+            completion()
         }
     }
     
@@ -135,20 +212,15 @@ final class MainPresenter: MainPresenterProtocol {
         dailyWeatherModels = weather.daily
         
         calculateWeekTemperatureRange()
-        
+    }
+    
+    func handleDataLoaded() {
         if let current = currentWeatherModel {
             let background = makeBackground(weather: current)
             view?.setBackground(background)
         }
         
         view?.reloadData()
-    }
-    
-    func calculateWeekTemperatureRange() {
-        guard !dailyWeatherModels.isEmpty else { return }
-        
-        weekMinTemp = dailyWeatherModels.map { $0.minTemperature }.min() ?? 0
-        weekMaxTemp = dailyWeatherModels.map { $0.maxTemperature }.max() ?? 0
     }
     
     func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {
@@ -167,20 +239,11 @@ final class MainPresenter: MainPresenterProtocol {
         case (.night, true): return .rainyNight
         }
     }
-}
-
-extension MainPresenter {
-    private func makeDayTime(date: Date) -> DayTime {
-        let hour = Calendar.current.component(.hour, from: date)
-        switch hour {
-        case 6..<12: return .morning
-        case 12..<18: return .afternoon
-        case 18..<22: return .evening
-        default: return .night
-        }
-    }
     
-    private func isRaining(weatherId: Int) -> Bool {
-        return weatherId >= 200 && weatherId <= 531
+    func calculateWeekTemperatureRange() {
+        guard !dailyWeatherModels.isEmpty else { return }
+        
+        weekMinTemp = dailyWeatherModels.map { $0.minTemperature }.min() ?? 0
+        weekMaxTemp = dailyWeatherModels.map { $0.maxTemperature }.max() ?? 0
     }
 }

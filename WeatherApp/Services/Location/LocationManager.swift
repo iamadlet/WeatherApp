@@ -5,13 +5,13 @@ protocol LocationManagerProtocol: AnyObject {
     var authorizationStatus: CLAuthorizationStatus { get }
     var currentLocation: CLLocation? { get }
     
-    func requestCurrentLocation(completion: @escaping (Double, Double) -> Void)
+    func getCurrentLocation(completion: @escaping (Result<Coordinates, LocationError>) -> Void)
 }
 
 final class LocationManager: NSObject, LocationManagerProtocol {
     private let manager: CLLocationManager
     
-    private var onLocation: ((Double, Double) -> Void)?
+    private var completion: ((Result<Coordinates, LocationError>) -> Void)?
     
     private(set) var currentLocation: CLLocation?
     
@@ -23,47 +23,97 @@ final class LocationManager: NSObject, LocationManagerProtocol {
         self.manager = CLLocationManager()
         super.init()
         manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
     }
     
-    func requestCurrentLocation(completion: @escaping (Double, Double) -> Void) {
-        manager.requestWhenInUseAuthorization()
-        manager.requestLocation()
+    func getCurrentLocation(completion: @escaping (Result<Coordinates, LocationError>) -> Void) {
+        self.completion = completion
         
-        self.onLocation = completion
+        switch authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+            
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+            
+        case .denied:
+            completion(.failure(.denied))
+            
+        case .restricted:
+            completion(.failure(.restricted))
+        
+        @unknown default:
+            completion(.failure(.unknown))
+        }
     }
-    
-    
 }
 
 extension LocationManager: CLLocationManagerDelegate {
+    
     func locationManager(
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
-        guard let location = locations.last?.coordinate else { return }
+        guard let location = locations.last else {
+            completion?(.failure(.locationNotFound))
+            completion = nil
+            return
+        }
         
-        onLocation?(location.latitude, location.longitude)
-        print(location.latitude, location.longitude)
+        currentLocation = location
+        
+        let coordinates = Coordinates(
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude
+        )
+        
+        completion?(.success(coordinates))
+        completion = nil
+        
+        print("Location: \(coordinates.latitude), \(coordinates.longitude)")
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         // TODO: - добавить функционал для этого метода
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            manager.requestLocation()
+            if completion != nil {
+                manager.requestLocation()
+            }
             
-        case .denied, .restricted:
-            print("Нет доступа к локации")
+        case .denied:
+            completion?(.failure(.denied))
+            completion = nil
+            
+        case .restricted:
+            completion?(.failure(.restricted))
+            completion = nil
             
         case .notDetermined:
             break
             
-        default:
-            break
+        @unknown default:
+            completion?(.failure(.unknown))
+            completion = nil
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
         print("Location error: \(error.localizedDescription)")
+        
+        if let clError = error as? CLError {
+            switch clError.code {
+            case .denied:
+                completion?(.failure(.denied))
+            case .locationUnknown:
+                completion?(.failure(.locationNotFound))
+            default:
+                completion?(.failure(.unknown))
+            }
+        } else {
+            completion?(.failure(.unknown))
+        }
+        
+        completion = nil
     }
 }

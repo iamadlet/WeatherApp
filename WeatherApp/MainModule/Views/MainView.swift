@@ -23,18 +23,21 @@ final class MainView: UIView {
     
     lazy var weatherView: WeatherCollectionView = {
         let view = WeatherCollectionView()
+        view.backgroundColor = .clear
         view.isHidden = true
         return view
     }()
     
     lazy var loadingView: LoadingView = {
         let view = LoadingView()
+        view.backgroundColor = .clear
         view.isHidden = true
         return view
     }()
     
     lazy var errorView: ErrorView = {
         let view = ErrorView()
+        view.backgroundColor = .clear
         view.isHidden = true
         return view
     }()
@@ -65,15 +68,22 @@ final class MainView: UIView {
     }
     
     func setBackground(_ background: WeatherBackground) {
-        UIView.transition(with: backgroundImageView, duration: 0.3, options: .transitionCrossDissolve) {
-            self.backgroundImageView.image = UIImage(named: background.rawValue)
+        let imageName = background.rawValue
+            
+        if let image = UIImage(named: imageName) {
+            print("✅ Image found: \(imageName)")
+            UIView.transition(with: backgroundImageView, duration: 0.3, options: .transitionCrossDissolve) {
+                self.backgroundImageView.image = image
+            }
+        } else {
+            print("❌ Image NOT found: \(imageName)")
         }
     }
 }
 
 private extension MainView {
     func commonInit() {
-        backgroundColor = .systemBlue
+//        backgroundColor = .systemBlue
         setupSubviews()
         setupConstraints()
     }
@@ -82,11 +92,12 @@ private extension MainView {
         addSubview(loadingView)
         addSubview(errorView)
         addSubview(weatherView)
+        addSubview(backgroundImageView)
     }
     
     func setupConstraints() {
-        [loadingView, errorView, weatherView].forEach { view in
-            snp.makeConstraints { make in
+        [loadingView, errorView, weatherView, backgroundImageView].forEach { view in
+            view.snp.makeConstraints { make in
                 make.edges.equalToSuperview()
             }
         }
