@@ -1,13 +1,9 @@
 import Foundation
+import UIKit
 
 protocol MainPresenterProtocol: AnyObject {
     func viewDidLoad()
     func didTapRetry()
-    
-    // Data Source
-    var numberOfSections: Int { get }
-    func numberOfItems(in section: Int) -> Int
-    func sectionType(for section: Int) -> WeatherSection?
     
     // Models
     func cityName() -> String
@@ -34,6 +30,8 @@ final class MainPresenter: MainPresenterProtocol {
         self.locationManager = locationManager
     }
     
+    private var weatherModel: WeatherModel?
+    
     private var currentWeatherModel: CurrentWeatherModel?
     private var hourlyWeatherModels: [HourlyWeatherModel] = []
     private var dailyWeatherModels: [DailyWeatherModel] = []
@@ -55,29 +53,6 @@ final class MainPresenter: MainPresenterProtocol {
     
     func didTapRetry() {
         loadData()
-    }
-    
-    var numberOfSections: Int {
-        return WeatherSection.allCases.count
-    }
-    
-    func numberOfItems(in section: Int) -> Int {
-        guard let sectionType = WeatherSection(rawValue: section) else {
-            return 0
-        }
-        
-        switch sectionType {
-        case .current:
-            return currentWeatherModel != nil ? 1 : 0
-        case .hourly:
-            return hourlyWeatherModels.count
-        case .daily:
-            return dailyWeatherModels.count
-        }
-    }
-    
-    func sectionType(for section: Int) -> WeatherSection? {
-        return WeatherSection(rawValue: section)
     }
     
     func currentWeather() -> CurrentWeatherModel? {
@@ -127,14 +102,13 @@ private extension MainPresenter {
     func loadData() {
         view?.showLoading()
         
-        // MARK: - Если пустые/битые координаты
         fetchLocation { [weak self] coordinates in
             self?.coordinates = coordinates
             self?.fetchAllData(for: coordinates)
         }
     }
     
-    func fetchAllData(for coordinates: Coordinates) {
+    private func fetchAllData(for coordinates: Coordinates) {
         let group = DispatchGroup()
         
         group.enter()
@@ -152,20 +126,21 @@ private extension MainPresenter {
         }
     }
     
-    func fetchLocation(completion: @escaping (Coordinates) -> Void) {
+    private func fetchLocation(completion: @escaping (Coordinates) -> Void) {
         locationManager.getCurrentLocation { [weak self] result in
-            switch result {
-            case .success(let coordinates):
-                completion(coordinates)
-            case .failure(let error):
-                DispatchQueue.main.async {
-                    self?.view?.showError()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success(let coordinates):
+                    completion(coordinates)
+                case .failure(let error):
+                    self.view?.showError()
                 }
             }
         }
     }
     
-    func fetchCityName(for coordinates: Coordinates, completion: @escaping () -> Void) {
+    private func fetchCityName(for coordinates: Coordinates, completion: @escaping () -> Void) {
         let request = ReverseGeocodingRequest(
             lat: coordinates.latitude,
             lon: coordinates.longitude,
@@ -173,18 +148,21 @@ private extension MainPresenter {
         )
         
         geocodingService.fetchCityName(request: request) { [weak self] result in
-            switch result {
-            case .success(let city):
-                print("City found: \(city.name)")
-                self?.city = city.name
-            case .failure(let error):
-                self?.city = "Unknown city"
+            DispatchQueue.main.async {
+                defer { completion() }
+                guard let self = self else { return }
+                switch result {
+                case .success(let city):
+                    print("City found: \(city.name)")
+                    self.city = city.name
+                case .failure(let error):
+                    self.city = "Unknown city"
+                }
             }
-            completion()
         }
     }
     
-    func fetchWeather(for coordinates: Coordinates, completion: @escaping () -> Void) {
+    private func fetchWeather(for coordinates: Coordinates, completion: @escaping () -> Void) {
         let request = ForecastRequest(
             lat: coordinates.latitude,
             lon: coordinates.longitude,
@@ -192,21 +170,21 @@ private extension MainPresenter {
         )
         
         weatherService.fetchWeather(request: request) { [weak self] result in
-            guard let self = self else { return }
-            
-            switch result {
-            case .success(let weather):
-                self.handleWeatherResponse(weather)
-            case .failure(let error):
-                DispatchQueue.main.async {
+            DispatchQueue.main.async {
+                defer { completion() }
+                guard let self = self else { return }
+                switch result {
+                case .success(let weather):
+                    self.handleWeatherResponse(weather)
+                case .failure(let error):
                     self.view?.showError()
                 }
             }
-            completion()
         }
     }
     
-    func handleWeatherResponse(_ weather: WeatherModel) {
+    private func handleWeatherResponse(_ weather: WeatherModel) {
+        weatherModel = weather
         currentWeatherModel = weather.current
         hourlyWeatherModels = weather.hourly
         dailyWeatherModels = weather.daily
@@ -214,16 +192,23 @@ private extension MainPresenter {
         calculateWeekTemperatureRange()
     }
     
-    func handleDataLoaded() {
-        if let current = currentWeatherModel {
-            let background = makeBackground(weather: current)
-            view?.setBackground(background)
+    private func handleDataLoaded() {
+        guard let current = currentWeatherModel, let model = weatherModel else {
+            return
         }
+        let background = makeBackground(weather: current)
+        view?.setBackground(background)
         
-        view?.reloadData()
+        view?.showWeather()
+        
+        view?.configureCurrentWeather(city: cityName(), current: current, today: dailyWeatherModels.first!)
+        view?.configureHourlyWeather(data: hourlyWeatherModels, description: dailyWeatherModels.first?.main.description ?? "", cardColor: background.cardColor)
+        view?.configureDailyWeather(data: dailyWeatherModels, weeklyMin: weekMinTemp, weeklyMax: weekMaxTemp, cardColor: background.cardColor)
+        let details = makeWeatherDetails(model: model, cardColor: background.cardColor)
+        view?.configureWeatherDetails(with: details)
     }
     
-    func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {
+    private func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {
         let time = makeDayTime(date: weather.date)
         let rain = isRaining(weatherId: weather.weatherId)
         
@@ -240,10 +225,105 @@ private extension MainPresenter {
         }
     }
     
-    func calculateWeekTemperatureRange() {
+    private func makeWeatherDetails(model: WeatherModel, cardColor: UIColor?) -> WeatherDetailsModel {
+        let current = model.current
+        let daily = model.daily
+        
+        let todayMax = daily.first?.maxTemperature ?? 0
+        let avgMax = daily.map { $0.maxTemperature }.reduce(0, +) / Double(max(daily.count, 1))
+        let diff = Int((todayMax - avgMax).rounded())
+        
+        let avgDescription: String
+        let avgValue: String
+        if diff >= 0 {
+            avgValue = "+\(abs(diff))°"
+            avgDescription = "above average daily high"
+        } else {
+            avgValue = "-\(abs(diff))°"
+            avgDescription = "below average daily high"
+        }
+        
+        let avgFooter = "Today      Max.:\(Int(todayMax.rounded()))°On average   Max.:\(Int(avgMax.rounded()))°"
+        
+        let feelsLikeDiff = current.feelsLike - current.temperature
+        let feelsLikeFooter: String
+        if feelsLikeDiff > 1 {
+            feelsLikeFooter = "It feels warmer than it actually is."
+        } else if feelsLikeDiff < -1 {
+            feelsLikeFooter = "It feels colder than it actually is."
+        } else {
+            feelsLikeFooter = "Similar to the actual temperature."
+        }
+        
+        let directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        let dirIndex = Int((Double(current.windDegree) + 22.5) / 45.0) % 8
+        
+        let uvIndex = Int(current.uvIndex.rounded())
+        let uvLevel: String
+        let uvDescription: String
+        switch uvIndex {
+        case 0...2:
+            uvLevel = "Low"
+            uvDescription = "Will remain low until the end of the day."
+        case 3...5:
+            uvLevel = "Moderate"
+            uvDescription = "Will remain moderate until the end of the day."
+        case 6...7:
+            uvLevel = "High"
+            uvDescription = "Use sunscreen"
+        case 8...10:
+            uvLevel = "Very high"
+            uvDescription = "Avoid prolonged exposure to the sun."
+        default:
+            uvLevel = "Extreme"
+            uvDescription = "Try not to go outside"
+        }
+        
+        let sunsetTime = formatTime(current.sunset)
+        let sunriseTime = formatTime(current.sunrise)
+        
+        let pressureFooter: String
+        if current.pressure > 1013 {
+            pressureFooter = "↑ gPa"
+        } else if current.pressure < 1013 {
+            pressureFooter = "↓ gPa"
+        } else {
+            pressureFooter = "- gPa"
+        }
+        
+        return WeatherDetailsModel(
+            cardColor: cardColor,
+            avgValue: avgValue,
+            avgDescription: avgDescription,
+            avgFooter: avgFooter,
+            feelsLike: "\(Int(current.feelsLike.rounded()))°",
+            feelsLikeFooter: feelsLikeFooter,
+            windSpeed: "\(Int(current.windSpeed.rounded())) km/h",
+            windGust: "\(Int(current.windGust.rounded())) km/h",
+            windDirection: "\(current.windDegree)° \(directions[dirIndex])",
+            uvIndexValue: uvIndex,
+            uvLevel: uvLevel,
+            uvDescription: uvDescription,
+            sunsetTime: sunsetTime,
+            sunriseTime: sunriseTime,
+            humidity: "\(current.humidity)%",
+            humidityDescription: "Dew point:\(Int(current.dewPoint.rounded()))°.",
+            pressureValue: "\(current.pressure)",
+            pressureFooter: pressureFooter
+        )
+    }
+    
+    private func calculateWeekTemperatureRange() {
         guard !dailyWeatherModels.isEmpty else { return }
         
         weekMinTemp = dailyWeatherModels.map { $0.minTemperature }.min() ?? 0
         weekMaxTemp = dailyWeatherModels.map { $0.maxTemperature }.max() ?? 0
+    }
+    
+    private func formatTime(_ timestamp: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }

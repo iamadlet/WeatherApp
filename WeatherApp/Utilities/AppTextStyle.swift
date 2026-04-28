@@ -8,6 +8,10 @@ enum AppTextStyle {
     
     case weatherDescription
     case temperatureForecast
+    
+    case currentLocationLabel
+    
+    case weatherCardFooter
 }
 
 
@@ -26,6 +30,10 @@ extension AppTextStyle {
             return .systemFont(ofSize: 14, weight: .regular)
         case .temperatureForecast:
             return .systemFont(ofSize: 15, weight: .medium)
+        case .currentLocationLabel:
+            return .systemFont(ofSize: 12, weight: .medium)
+        case .weatherCardFooter:
+            return .systemFont(ofSize: 10, weight: .medium)
         }
         
     }

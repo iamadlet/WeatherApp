@@ -2,17 +2,17 @@ import UIKit
 
 protocol MainViewProtocol: AnyObject {
     func showWeather()
-    
     func showError()
-    
     func showLoading()
-    func reloadData()
     func setBackground(_ background: WeatherBackground)
+    
+    func configureCurrentWeather(city: String, current: CurrentWeatherModel, today: DailyWeatherModel)
+    func configureHourlyWeather(data: [HourlyWeatherModel], description: String, cardColor: UIColor?)
+    func configureDailyWeather(data: [DailyWeatherModel], weeklyMin: Double, weeklyMax: Double, cardColor: UIColor?)
+    func configureWeatherDetails(with details: WeatherDetailsModel)
 }
 
 final class MainViewController: UIViewController {
-    
-    
     private let presenter: MainPresenterProtocol
     
     private lazy var mainView = MainView()
@@ -33,16 +33,10 @@ final class MainViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupCollectionView()
         setupCallBacks()
         
         print("WeatherViewController loaded")
         presenter.viewDidLoad()
-    }
-    
-    private func setupCollectionView() {
-        mainView.weatherView.collectionView.delegate = self
-        mainView.weatherView.collectionView.dataSource = self
     }
     
     private func setupCallBacks() {
@@ -53,6 +47,35 @@ final class MainViewController: UIViewController {
 }
 
 extension MainViewController: MainViewProtocol {
+    func configureCurrentWeather(city: String, current: CurrentWeatherModel, today: DailyWeatherModel) {
+        mainView.weatherView.currentWeatherView.configure(
+            city: city,
+            current: current,
+            todayDaily: today
+        )
+    }
+    
+    func configureHourlyWeather(data: [HourlyWeatherModel], description: String, cardColor: UIColor?) {
+        mainView.weatherView.hourlyWeatherView.configure(
+            with: data,
+            description: description,
+            cardColor: cardColor
+        )
+    }
+    
+    func configureDailyWeather(data: [DailyWeatherModel], weeklyMin: Double, weeklyMax: Double, cardColor: UIColor?) {
+        mainView.weatherView.dailyWeatherView.configure(
+            with: data,
+            weeklyMin: weeklyMin,
+            weeklyMax: weeklyMax,
+            cardColor: cardColor
+        )
+    }
+    
+    func configureWeatherDetails(with details: WeatherDetailsModel) {
+        mainView.weatherView.weatherDetailsGridView.configure(with: details)
+    }
+    
     func setBackground(_ background: WeatherBackground) {
         mainView.setBackground(background)
     }
@@ -67,96 +90,5 @@ extension MainViewController: MainViewProtocol {
     
     func showLoading() {
         mainView.showLoading()
-    }
-    
-    func reloadData() {
-        mainView.showWeather()
-        mainView.reloadData()
-    }
-}
-
-extension MainViewController: UICollectionViewDataSource {
-    func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return presenter.numberOfSections
-    }
-
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return presenter.numberOfItems(in: section)
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let sectionType = presenter.sectionType(for: indexPath.section) else {
-            return UICollectionViewCell()
-        }
-        
-        switch sectionType {
-        case .current:
-            return configureCurrentCell(collectionView, at: indexPath)
-        case .hourly:
-            return configureHourlyCell(collectionView, at: indexPath)
-        case .daily:
-            return configureDailyCell(collectionView, at: indexPath)
-        }
-    }
-    
-    
-}
-
-extension MainViewController: UICollectionViewDelegate {
-    
-}
-
-
-private extension MainViewController {
-    func configureCurrentCell(_ collectionView: UICollectionView, at indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: CurrentWeatherCell.identifier,
-            for: indexPath
-        ) as? CurrentWeatherCell,
-        let current = presenter.currentWeather() else {
-            return UICollectionViewCell()
-        }
-        
-        cell.configure(
-            city: presenter.cityName(),
-            current: current,
-            todayDaily: presenter.todayDailyWeather()
-        )
-        return cell
-    }
-    
-    func configureHourlyCell(_ collectionView: UICollectionView, at indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: HourlyWeatherCell.identifier,
-            for: indexPath
-        ) as? HourlyWeatherCell,
-        let model = presenter.hourlyWeather(at: indexPath.item) else {
-            return UICollectionViewCell()
-        }
-        
-        let isNow = presenter.isFirstItem(indexPath.item)
-        cell.configure(with: model, isNow: isNow)
-        return cell
-    }
-    
-    func configureDailyCell(_ collectionView: UICollectionView, at indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: DailyWeatherCell.identifier,
-            for: indexPath
-        ) as? DailyWeatherCell,
-        let model = presenter.dailyWeather(at: indexPath.item) else {
-            return UICollectionViewCell()
-        }
-        
-        let isToday = presenter.isFirstItem(indexPath.item)
-        let tempRange = presenter.weekTemperatureRange()
-        
-        cell.configure(
-            with: model,
-            weekMin: tempRange.min,
-            weekMax: tempRange.max,
-            isToday: isToday
-        )
-        return cell
     }
 }

@@ -42,8 +42,12 @@ final class TemperatureBarView: UIView {
     }()
     
     private func setupUI() {
+        clipsToBounds = true
+        
         addSubview(backgroundBar)
         addSubview(colorBar)
+        
+        colorBar.isHidden = true
         
         backgroundBar.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview()
@@ -65,7 +69,9 @@ final class TemperatureBarView: UIView {
         self.dayMax = dayMax
         self.dayMin = dayMin
         
+        colorBar.isHidden = false
         setNeedsLayout()
+        layoutIfNeeded()
     }
     
     private func updateBarPosition() {
@@ -80,17 +86,13 @@ final class TemperatureBarView: UIView {
         let leadingOffset = totalWidth * minPosition
         let trailingOffset = totalWidth * (1 - maxPosition)
         
-        colorBar.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(leadingOffset)
-            make.trailing.equalToSuperview().offset(-trailingOffset)
-        }
+        colorBarLeadingConstraint?.update(offset: leadingOffset)
+        colorBarTrailingConstraint?.update(offset: -trailingOffset)
     }
     
     func reset() {
-        colorBar.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(0)
-            make.trailing.equalToSuperview().offset(0)
-        }
-        colorBar.backgroundColor = .systemGreen
+        colorBarLeadingConstraint?.update(offset: 0)
+        colorBarTrailingConstraint?.update(offset: 0)
+        colorBar.backgroundColor = AppColorManager.temperatureBarMint
     }
 }

@@ -33,7 +33,7 @@ final class ErrorView: UIView {
     
     private lazy var retryButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Повторить", for: .normal)
+        button.setTitle("Retry", for: .normal)
         button.setTitleColor(AppColorManager.background, for: .normal)
         button.backgroundColor = AppColorManager.primary
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)

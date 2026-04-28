@@ -9,6 +9,15 @@ struct CurrentWeatherModel {
     let windSpeed: Double
     let main: String
     let weatherId: Int
+    
+    let feelsLike: Double
+    let pressure: Int
+    let uvIndex: Double
+    let windGust: Double
+    let windDegree: Int
+    let sunrise: Int
+    let sunset: Int
+    let dewPoint: Double
 }
 
 extension CurrentWeatherModel {
@@ -20,8 +29,17 @@ extension CurrentWeatherModel {
         self.description = weather.description
         self.icon = weather.icon
         self.humidity = response.humidity
-        self.windSpeed = response.windSpeed
         self.main = weather.main
         self.weatherId = weather.id
+        
+        self.feelsLike = response.feelsLike
+        self.pressure = response.pressure
+        self.uvIndex = response.uvIndex
+        self.windSpeed = response.windSpeed
+        self.windGust = response.windGust ?? 0
+        self.windDegree = response.windDegree
+        self.sunrise = response.sunrise
+        self.sunset = response.sunset
+        self.dewPoint = response.dewPoint
     }
 }

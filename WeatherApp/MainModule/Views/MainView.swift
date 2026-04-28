@@ -21,8 +21,8 @@ final class MainView: UIView {
         return imageView
     }()
     
-    lazy var weatherView: WeatherCollectionView = {
-        let view = WeatherCollectionView()
+    lazy var weatherView: WeatherScrollView = {
+        let view = WeatherScrollView()
         view.backgroundColor = .clear
         view.isHidden = true
         return view
@@ -63,10 +63,6 @@ final class MainView: UIView {
         bringSubviewToFront(weatherView)
     }
     
-    func reloadData() {
-        weatherView.collectionView.reloadData()
-    }
-    
     func setBackground(_ background: WeatherBackground) {
         let imageName = background.rawValue
             
@@ -83,7 +79,6 @@ final class MainView: UIView {
 
 private extension MainView {
     func commonInit() {
-//        backgroundColor = .systemBlue
         setupSubviews()
         setupConstraints()
     }

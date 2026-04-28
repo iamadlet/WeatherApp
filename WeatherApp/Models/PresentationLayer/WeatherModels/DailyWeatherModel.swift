@@ -23,11 +23,11 @@ extension DailyWeatherModel {
 extension DailyWeatherModel {
     func formattedDay(isToday: Bool = false) -> String {
         if isToday {
-            return "Сегодня"
+            return "Today"
         }
         
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = Locale(identifier: "en_US")
         formatter.dateFormat = "EE"
         
         let day = formatter.string(from: date)
