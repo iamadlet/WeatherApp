@@ -33,7 +33,7 @@ extension AppTextStyle {
         case .currentLocationLabel:
             return .systemFont(ofSize: 12, weight: .medium)
         case .weatherCardFooter:
-            return .systemFont(ofSize: 10, weight: .medium)
+            return .systemFont(ofSize: 15, weight: .regular)
         }
         
     }
