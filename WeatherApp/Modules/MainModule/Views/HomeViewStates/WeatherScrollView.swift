@@ -2,6 +2,8 @@ import UIKit
 import SnapKit
 
 final class WeatherScrollView: UIView {
+    var onRefresh: (() -> Void)?
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -24,6 +26,21 @@ final class WeatherScrollView: UIView {
         return sv
     }()
     
+    private lazy var refreshControl: UIRefreshControl = {
+        let refresh = UIRefreshControl()
+        refresh.tintColor = .white
+        refresh.addTarget(self, action: #selector(handleRefresh), for: .valueChanged)
+        return refresh
+    }()
+    
+    @objc private func handleRefresh() {
+        onRefresh?()
+    }
+    
+    func endRefreshing() {
+        refreshControl.endRefreshing()
+    }
+    
     let currentWeatherView = CurrentWeatherBlockView()
     let hourlyWeatherView = HourlyWeatherBlockView()
     let dailyWeatherView = DailyWeatherBlockView()
@@ -32,6 +49,7 @@ final class WeatherScrollView: UIView {
     private func setupUI() {
         addSubview(scrollView)
         scrollView.addSubview(stackView)
+        scrollView.refreshControl = refreshControl
         
         scrollView.snp.makeConstraints { make in
             make.edges.equalToSuperview()

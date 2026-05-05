@@ -1,6 +1,4 @@
-import Foundation
-
-struct ReverseGeocodingResponse: Decodable {
+struct DirectGeocodingResponse: Decodable {
     let name: String
     let country: String
     let lat: Double

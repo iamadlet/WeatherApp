@@ -3,7 +3,7 @@ import Foundation
 protocol GeocodingServiceProtocol: AnyObject {
     func fetchCityName(
         request: ReverseGeocodingRequest,
-        completion: @escaping (Result<ReverseGeocodingModel, ApiClientError>) -> Void
+        completion: @escaping (Result<City, ApiClientError>) -> Void
     )
 }
 
@@ -16,7 +16,7 @@ final class GeocodingService: GeocodingServiceProtocol {
     
     func fetchCityName(
         request: ReverseGeocodingRequest,
-        completion: @escaping (Result<ReverseGeocodingModel, ApiClientError>) -> Void
+        completion: @escaping (Result<City, ApiClientError>) -> Void
     ) {
         networkManager.send(request: request) { (result: Result<[ReverseGeocodingResponse], ApiClientError>) in
             switch result {
@@ -27,7 +27,7 @@ final class GeocodingService: GeocodingServiceProtocol {
                     return
                 }
                 
-                guard let city = ReverseGeocodingModel(response: response) else {
+                guard let city = City(from: response) else {
                     print("Failed to create ReverseGeocodingModel")
                     completion(.failure(.decodingError))
                     return

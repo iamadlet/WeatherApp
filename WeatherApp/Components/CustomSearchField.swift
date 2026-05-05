@@ -51,7 +51,7 @@ class CustomSearchField: UITextField {
     }
     
     private func setupIcon() {
-        let icon = UIImageView(image: UIImage(systemName: "search"))
+        let icon = UIImageView(image: UIImage(named: "search"))
         icon.tintColor = AppColorManager.white
         icon.contentMode = .scaleAspectFit
         

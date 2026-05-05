@@ -9,7 +9,8 @@ protocol MainViewProtocol: AnyObject {
     func configureCurrentWeather(city: String, current: CurrentWeatherModel, today: DailyWeatherModel)
     func configureHourlyWeather(data: [HourlyWeatherModel], description: String, cardColor: UIColor?)
     func configureDailyWeather(data: [DailyWeatherModel], weeklyMin: Double, weeklyMax: Double, cardColor: UIColor?)
-    func configureWeatherDetails(with details: WeatherDetailsModel)
+    func configureWeatherDetails(with details: WeatherDetailsModel, cardColor: UIColor?)
+    func stopRefreshing()
 }
 
 final class MainViewController: UIViewController {
@@ -33,6 +34,7 @@ final class MainViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationItem.hidesBackButton = true
         setupCallBacks()
         
         print("WeatherViewController loaded")
@@ -41,6 +43,14 @@ final class MainViewController: UIViewController {
     
     private func setupCallBacks() {
         mainView.onRetryTapped = { [weak self] in
+            self?.presenter.didTapRetry()
+        }
+        
+        mainView.onListButtonTapped = { [weak self] in
+            self?.presenter.didTapButton()
+        }
+        
+        mainView.onRefreshTapped = { [weak self] in  // ← добавить
             self?.presenter.didTapRetry()
         }
     }
@@ -72,8 +82,8 @@ extension MainViewController: MainViewProtocol {
         )
     }
     
-    func configureWeatherDetails(with details: WeatherDetailsModel) {
-        mainView.weatherView.weatherDetailsGridView.configure(with: details)
+    func configureWeatherDetails(with details: WeatherDetailsModel, cardColor: UIColor?) {
+        mainView.weatherView.weatherDetailsGridView.configure(with: details, cardColor: cardColor)
     }
     
     func setBackground(_ background: WeatherBackground) {
@@ -90,5 +100,9 @@ extension MainViewController: MainViewProtocol {
     
     func showLoading() {
         mainView.showLoading()
+    }
+    
+    func stopRefreshing() {
+        mainView.weatherView.endRefreshing()
     }
 }

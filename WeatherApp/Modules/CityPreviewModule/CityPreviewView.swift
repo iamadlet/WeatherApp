@@ -1,11 +1,11 @@
 import UIKit
 import SnapKit
 
-final class MainView: UIView {
+final class CityPreviewView: UIView {
     
+    var onCloseTapped: (() -> Void)?
+    var onAddTapped: (() -> Void)?
     var onRetryTapped: (() -> Void)?
-    var onListButtonTapped: (() -> Void)?
-    var onRefreshTapped: (() -> Void)?
     
     init() {
         super.init(frame: .zero)
@@ -44,35 +44,43 @@ final class MainView: UIView {
         return view
     }()
     
-    private lazy var listButton: UIButton = {
+    // MARK: - Top bar
+    private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Иконка
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        button.setImage(UIImage(named: "list"), for: .normal)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        button.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
         button.tintColor = .white
-        
-        // Стилизация (круглая кнопка с размытым фоном)
         button.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-        button.layer.cornerRadius = 25
+        button.layer.cornerRadius = 22
         button.clipsToBounds = true
-        
-        button.addTarget(self, action: #selector(listButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         return button
     }()
     
-    @objc private func listButtonTapped() {
-        print("Open Search Module button tapped")
-        onListButtonTapped?()
-    }
+    private lazy var addButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        button.setImage(UIImage(systemName: "plus", withConfiguration: config), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        button.layer.cornerRadius = 22
+        button.clipsToBounds = true
+        button.addTarget(self, action: #selector(addTapped), for: .touchUpInside)
+        return button
+    }()
     
+    // MARK: - Actions
+    @objc private func closeTapped() { onCloseTapped?() }
+    @objc private func addTapped() { onAddTapped?() }
+    
+    // MARK: - Public
     func showLoading() {
         loadingView.isHidden = false
         errorView.isHidden = true
         weatherView.isHidden = true
         bringSubviewToFront(loadingView)
-        bringSubviewToFront(listButton)
+        bringSubviewToFront(closeButton)
+        bringSubviewToFront(addButton)
     }
     
     func showError() {
@@ -80,7 +88,8 @@ final class MainView: UIView {
         loadingView.isHidden = true
         weatherView.isHidden = true
         bringSubviewToFront(errorView)
-        bringSubviewToFront(listButton)
+        bringSubviewToFront(closeButton)
+        bringSubviewToFront(addButton)
     }
     
     func showWeather() {
@@ -88,50 +97,57 @@ final class MainView: UIView {
         loadingView.isHidden = true
         errorView.isHidden = true
         bringSubviewToFront(weatherView)
-        bringSubviewToFront(listButton)
+        bringSubviewToFront(closeButton)
+        bringSubviewToFront(addButton)
     }
     
     func setBackground(_ background: WeatherBackground) {
         let imageName = background.rawValue
-            
         if let image = UIImage(named: imageName) {
-            print("Image found: \(imageName)")
             UIView.transition(with: backgroundImageView, duration: 0.3, options: .transitionCrossDissolve) {
                 self.backgroundImageView.image = image
             }
-        } else {
-            print("Image NOT found: \(imageName)")
         }
+    }
+    
+    // Скрываем кнопку добавления если город уже сохранён
+    func setAlreadySaved(_ saved: Bool) {
+        addButton.isHidden = saved
     }
 }
 
-private extension MainView {
+private extension CityPreviewView {
     func commonInit() {
         setupSubviews()
         setupConstraints()
+        setupCallbacks()
     }
     
     func setupSubviews() {
+        addSubview(backgroundImageView)
         addSubview(loadingView)
         addSubview(errorView)
         addSubview(weatherView)
-        addSubview(backgroundImageView)
-        addSubview(listButton)
-        
-        weatherView.onRefresh = { [weak self] in
-            self?.onRefreshTapped?()
-        }
+        addSubview(closeButton)
+        addSubview(addButton)
     }
     
     func setupConstraints() {
-        [loadingView, errorView, weatherView, backgroundImageView].forEach { view in
-            view.snp.makeConstraints { make in
+        [backgroundImageView, loadingView, errorView, weatherView].forEach {
+            $0.snp.makeConstraints { make in
                 make.edges.equalToSuperview()
             }
         }
         
-        listButton.snp.makeConstraints { make in
-            make.trailing.bottom.equalToSuperview().inset(28)
+        closeButton.snp.makeConstraints { make in
+            make.leading.equalToSuperview().inset(20)
+            make.top.equalTo(safeAreaLayoutGuide).inset(12)
+            make.size.equalTo(44)
+        }
+        
+        addButton.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(20)
+            make.top.equalTo(safeAreaLayoutGuide).inset(12)
             make.size.equalTo(44)
         }
     }

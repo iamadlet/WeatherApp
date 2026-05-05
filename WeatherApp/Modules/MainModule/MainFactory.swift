@@ -1,7 +1,7 @@
 import UIKit
 
 final class MainFactory {
-    func make() -> UIViewController {
+    func make(coordinates: Coordinates? = nil) -> UIViewController {
         let host = "api.openweathermap.org"
         
         let networkManager = NetworkManager(host: host, token: Secrets.apiKey)
@@ -10,14 +10,20 @@ final class MainFactory {
         let weatherService = WeatherService(networkManager: networkManager)
         let geocodingService = GeocodingService(networkManager: networkManager)
         
+        let router = MainRouter()
+        
         let presenter = MainPresenter(
             weatherService: weatherService,
             geocodingService: geocodingService,
-            locationManager: locationManager
+            locationManager: locationManager,
+            router: router,
+            coordinates: coordinates
         )
         
         let vc = MainViewController(presenter: presenter)
+        
         presenter.view = vc
+        router.view = vc
         
         return vc
     }

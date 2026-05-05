@@ -24,13 +24,13 @@ final class WeatherDetailsGridView: UIView {
         }
     }
     
-    func configure(with model: WeatherDetailsModel) {
+    func configure(with model: WeatherDetailsModel, cardColor: UIColor?) {
         mainStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
         // Ряд 1: В среднем + Ощущается как
         let row1 = createRow(
-            left: makeAverageCard(model: model),
-            right: makeFeelsLikeCard(model: model)
+            left: makeAverageCard(model: model, color: cardColor),
+            right: makeFeelsLikeCard(model: model, color: cardColor)
         )
         mainStack.addArrangedSubview(row1)
         
@@ -39,21 +39,22 @@ final class WeatherDetailsGridView: UIView {
         windCard.configure(
             wind: model.windSpeed,
             gusts: model.windGust,
-            direction: model.windDirection
+            direction: model.windDirection,
+            cardColor: cardColor
         )
         mainStack.addArrangedSubview(windCard)
         
         // Ряд 3: УФ-индекс + Закат
         let row3 = createRow(
-            left: makeUVCard(model: model),
-            right: makeSunsetCard(model: model)
+            left: makeUVCard(model: model, color: cardColor),
+            right: makeSunsetCard(model: model, color: cardColor)
         )
         mainStack.addArrangedSubview(row3)
         
         // Ряд 4: Влажность + Давление
         let row4 = createRow(
-            left: makeHumidityCard(model: model),
-            right: makePressureCard(model: model)
+            left: makeHumidityCard(model: model, color: cardColor),
+            right: makePressureCard(model: model, color: cardColor)
         )
         mainStack.addArrangedSubview(row4)
     }
@@ -76,37 +77,40 @@ final class WeatherDetailsGridView: UIView {
     
     // MARK: - Card Factories
     
-    private func makeAverageCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makeAverageCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "graph",
             title: "On average",
             value: model.avgValue,
             description: model.avgDescription,
-            footer: model.avgFooter
+            footer: model.avgFooter,
+            cardColor: color
         )
         return card
     }
     
-    private func makeFeelsLikeCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makeFeelsLikeCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "thermometer",
             title: "Feels like",
             value: model.feelsLike,
-            footer: model.feelsLikeFooter
+            footer: model.feelsLikeFooter,
+            cardColor: color
         )
         return card
     }
     
-    private func makeUVCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makeUVCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "sunIcon",
             title: "UV index",
             value: "\(model.uvIndexValue)",
             description: model.uvLevel,
-            footer: model.uvDescription
+            footer: model.uvDescription,
+            cardColor: color
         )
         
         let scale = UVScaleView()
@@ -116,35 +120,38 @@ final class WeatherDetailsGridView: UIView {
         return card
     }
     
-    private func makeSunsetCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makeSunsetCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "sunsetIcon",
             title: "Sunset",
             value: model.sunsetTime,
-            footer: "Sunrise at \(model.sunriseTime)."
+            footer: "Sunrise at \(model.sunriseTime).",
+            cardColor: color
         )
         return card
     }
     
-    private func makeHumidityCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makeHumidityCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "humidity",
             title: "Humidity",
             value: model.humidity,
-            footer: model.humidityDescription
+            footer: model.humidityDescription,
+            cardColor: color
         )
         return card
     }
     
-    private func makePressureCard(model: WeatherDetailsModel) -> WeatherInfoCardView {
+    private func makePressureCard(model: WeatherDetailsModel, color: UIColor?) -> WeatherInfoCardView {
         let card = WeatherInfoCardView()
         card.configure(
             icon: "pressure",
             title: "Pressure",
             value: model.pressureValue,
-            footer: model.pressureFooter
+            footer: model.pressureFooter,
+            cardColor: color
         )
         return card
     }

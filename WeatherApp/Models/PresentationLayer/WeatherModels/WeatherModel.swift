@@ -1,6 +1,7 @@
 import Foundation
 
 struct WeatherModel {
+    let timezone: String
     let current: CurrentWeatherModel
     let hourly: [HourlyWeatherModel]
     let daily: [DailyWeatherModel]
