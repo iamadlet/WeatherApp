@@ -101,8 +101,12 @@ final class MainPresenter: MainPresenterProtocol {
 }
 
 extension MainPresenter {
-    private func makeDayTime(date: Date) -> DayTime {
-        let hour = Calendar.current.component(.hour, from: date)
+    private func makeDayTime(date: Date, timezone: String) -> DayTime {
+        var calendar = Calendar.current
+        if let tz = TimeZone(identifier: timezone) {
+            calendar.timeZone = tz
+        }
+        let hour = calendar.component(.hour, from: date)
         switch hour {
         case 6..<12: return .morning
         case 12..<18: return .afternoon
@@ -224,7 +228,7 @@ private extension MainPresenter {
             return
         }
         view?.stopRefreshing()
-        let background = makeBackground(weather: current)
+        let background = makeBackground(weather: current, timezone: model.timezone)
         view?.setBackground(background)
         
         view?.showWeather()
@@ -236,8 +240,8 @@ private extension MainPresenter {
         view?.configureWeatherDetails(with: details, cardColor: background.cardColor)
     }
     
-    private func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {
-        let time = makeDayTime(date: weather.date)
+    private func makeBackground(weather: CurrentWeatherModel, timezone: String) -> WeatherBackground {
+        let time = makeDayTime(date: weather.date, timezone: timezone)
         let rain = isRaining(weatherId: weather.weatherId)
         
         switch(time, rain) {

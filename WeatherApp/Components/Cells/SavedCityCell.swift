@@ -9,12 +9,20 @@ final class SavedCityCell: UITableViewCell {
     // MARK: - Subviews
     private let containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         view.layer.cornerRadius = 16
         view.layer.borderWidth = 0.5
         view.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
         view.clipsToBounds = true
         return view
+    }()
+    
+    private let backgroundImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return imageView
     }()
     
     private let nameLabel: UILabel = {
@@ -73,11 +81,44 @@ final class SavedCityCell: UITableViewCell {
             temperatureLabel.text = "\(Int(weather.temperature.rounded()))°"
             conditionLabel.text = weather.description.capitalized
             highLowLabel.text = "H:\(Int(weather.maxTemp.rounded()))°, L:\(Int(weather.minTemp.rounded()))°"
+            
+            let background = makeBackground(weather: weather)  // ← добавить
+            backgroundImageView.image = UIImage(named: background.rawValue)
         } else {
-            // Погода ещё грузится
             temperatureLabel.text = "—°"
             conditionLabel.text = "—"
             highLowLabel.text = "H:—° L:—°"
+            backgroundImageView.image = nil
+        }
+    }
+
+    private func makeBackground(weather: SavedCityWeather) -> WeatherBackground {
+        // Определяем время суток по timezone города
+        var calendar = Calendar.current
+        if let tz = TimeZone(identifier: weather.timezone) {
+            calendar.timeZone = tz
+        }
+        let hour = calendar.component(.hour, from: Date())
+        
+        let dayTime: DayTime
+        switch hour {
+        case 6..<12: dayTime = .morning
+        case 12..<18: dayTime = .afternoon
+        case 18..<22: dayTime = .evening
+        default: dayTime = .night
+        }
+        
+        let isRaining = weather.weatherId >= 200 && weather.weatherId <= 531
+        
+        switch (dayTime, isRaining) {
+        case (.morning, false): return .morning
+        case (.afternoon, false): return .afternoon
+        case (.evening, false): return .evening
+        case (.night, false): return .night
+        case (.morning, true): return .rainyMorning
+        case (.afternoon, true): return .rainyAfternoon
+        case (.evening, true): return .rainyEvening
+        case (.night, true): return .rainyNight
         }
     }
     
@@ -116,6 +157,7 @@ private extension SavedCityCell {
     
     func setupSubviews() {
         contentView.addSubview(containerView)
+        containerView.addSubview(backgroundImageView)
         [nameLabel, subtitleLabel, temperatureLabel, conditionLabel, highLowLabel]
             .forEach { containerView.addSubview($0) }
     }
@@ -124,7 +166,11 @@ private extension SavedCityCell {
         containerView.snp.makeConstraints { make in
             make.top.bottom.equalToSuperview().inset(6)
             make.leading.trailing.equalToSuperview().inset(20)
-            make.height.greaterThanOrEqualTo(105)
+            make.height.equalTo(105)
+        }
+        
+        backgroundImageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
         }
         
         nameLabel.snp.makeConstraints { make in
