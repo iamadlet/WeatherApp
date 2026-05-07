@@ -14,6 +14,8 @@ final class WeatherService: WeatherServiceProtocol {
         networkManager.send(request: request) { (result: Result<OneCallResponse, ApiClientError>) in
             switch result {
             case .success(let response):
+                let timezone = response.timezone
+                
                 guard let current = CurrentWeatherModel(response: response.current) else {
                     completion(.failure(.decodingError))
                     return
@@ -28,6 +30,7 @@ final class WeatherService: WeatherServiceProtocol {
                 }
                 
                 let data = WeatherModel(
+                    timezone: timezone,
                     current: current,
                     hourly: hourly,
                     daily: daily

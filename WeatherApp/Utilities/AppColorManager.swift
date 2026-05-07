@@ -21,4 +21,7 @@ enum AppColorManager {
     static let rainyAfternoon = UIColor(named: "#868C9185")?.withAlphaComponent(0.48)
     static let rainyEvening = UIColor(named: "#85879385")?.withAlphaComponent(0.48)
     static let rainyNight = UIColor(named: "#424D5885")?.withAlphaComponent(0.48)
+    
+    // MARK: - Search View Colors
+    static let searchFieldBackground = UIColor(named: "#0C274100")
 }

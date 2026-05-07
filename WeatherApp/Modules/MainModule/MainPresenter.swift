@@ -15,6 +15,7 @@ protocol MainPresenterProtocol: AnyObject {
     
     func weekTemperatureRange() -> (min: Double, max: Double)
     func isFirstItem(_ index: Int) -> Bool
+    func didTapButton()
 }
 
 final class MainPresenter: MainPresenterProtocol {
@@ -24,10 +25,23 @@ final class MainPresenter: MainPresenterProtocol {
     private let geocodingService: GeocodingServiceProtocol
     private let locationManager: LocationManagerProtocol
     
-    init(weatherService: WeatherServiceProtocol, geocodingService: GeocodingServiceProtocol, locationManager: LocationManagerProtocol) {
-        self.weatherService = weatherService
-        self.geocodingService = geocodingService
-        self.locationManager = locationManager
+    private let router: MainRouterProtocol
+    
+    private var isCurrentLocation: Bool
+    
+    init(
+        weatherService: WeatherServiceProtocol,
+        geocodingService: GeocodingServiceProtocol,
+        locationManager: LocationManagerProtocol,
+        router: MainRouterProtocol,
+        coordinates: Coordinates? = nil
+    ) {
+        self.weatherService = weatherService;
+        self.geocodingService = geocodingService;
+        self.locationManager = locationManager;
+        self.router = router;
+        self.coordinates = coordinates;
+        self.isCurrentLocation = coordinates == nil
     }
     
     private var weatherModel: WeatherModel?
@@ -80,11 +94,19 @@ final class MainPresenter: MainPresenterProtocol {
     func viewDidLoad() {
         loadData()
     }
+    
+    func didTapButton() {
+        router.openSearchModule()
+    }
 }
 
 extension MainPresenter {
-    private func makeDayTime(date: Date) -> DayTime {
-        let hour = Calendar.current.component(.hour, from: date)
+    private func makeDayTime(date: Date, timezone: String) -> DayTime {
+        var calendar = Calendar.current
+        if let tz = TimeZone(identifier: timezone) {
+            calendar.timeZone = tz
+        }
+        let hour = calendar.component(.hour, from: date)
         switch hour {
         case 6..<12: return .morning
         case 12..<18: return .afternoon
@@ -102,9 +124,13 @@ private extension MainPresenter {
     func loadData() {
         view?.showLoading()
         
-        fetchLocation { [weak self] coordinates in
-            self?.coordinates = coordinates
-            self?.fetchAllData(for: coordinates)
+        if let coordinates = coordinates {
+            fetchAllData(for: coordinates)
+        } else {
+            fetchLocation { [weak self] coordinates in
+                self?.coordinates = coordinates
+                self?.fetchAllData(for: coordinates)
+            }
         }
     }
     
@@ -155,6 +181,11 @@ private extension MainPresenter {
                 case .success(let city):
                     print("City found: \(city.name)")
                     self.city = city.name
+                    
+                    if self.isCurrentLocation {
+                        let currentCity = SavedCity(city: city, addedAt: Date(), isCurrentLocation: true)
+                        SavedCitiesService.shared.updateCurrentLocation(currentCity)
+                    }
                 case .failure(let error):
                     self.city = "Unknown city"
                 }
@@ -196,7 +227,8 @@ private extension MainPresenter {
         guard let current = currentWeatherModel, let model = weatherModel else {
             return
         }
-        let background = makeBackground(weather: current)
+        view?.stopRefreshing()
+        let background = makeBackground(weather: current, timezone: model.timezone)
         view?.setBackground(background)
         
         view?.showWeather()
@@ -205,11 +237,11 @@ private extension MainPresenter {
         view?.configureHourlyWeather(data: hourlyWeatherModels, description: dailyWeatherModels.first?.main.description ?? "", cardColor: background.cardColor)
         view?.configureDailyWeather(data: dailyWeatherModels, weeklyMin: weekMinTemp, weeklyMax: weekMaxTemp, cardColor: background.cardColor)
         let details = makeWeatherDetails(model: model, cardColor: background.cardColor)
-        view?.configureWeatherDetails(with: details)
+        view?.configureWeatherDetails(with: details, cardColor: background.cardColor)
     }
     
-    private func makeBackground(weather: CurrentWeatherModel) -> WeatherBackground {
-        let time = makeDayTime(date: weather.date)
+    private func makeBackground(weather: CurrentWeatherModel, timezone: String) -> WeatherBackground {
+        let time = makeDayTime(date: weather.date, timezone: timezone)
         let rain = isRaining(weatherId: weather.weatherId)
         
         switch(time, rain) {
